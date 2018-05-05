@@ -1,4 +1,5 @@
 const pg = require('pg');
+const env = require('dotenv').config();
 
 const config = {
   host: process.env.CUSTOMCONNSTR_PGHOST,
