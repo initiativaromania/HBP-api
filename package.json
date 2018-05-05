@@ -5,14 +5,11 @@
   "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "forever lib/index.js --exec babel-node",
-    "build": "babel lib -d dist",
-    "serve": "node dist/index.js"
+    "start": "forever index.js"
   },
   "author": "george s",
   "license": "ISC",
   "dependencies": {
-    "babel-cli": "^6.26.0",
     "dotenv": "^4.0.0",
     "eslint": "^4.19.1",
     "express": "^4.16.3",
