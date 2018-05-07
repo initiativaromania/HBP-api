@@ -7,7 +7,7 @@ const paginationWindow = 100;
 
 module.exports = router;
 
-router.get('/yo', function(req, res) {
+router.get('/yo',  (req, res) => {
   res.send(yo);
 });
 
