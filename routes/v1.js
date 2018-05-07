@@ -1,11 +1,15 @@
-const Router = require('express-promise-router')
-const db = require('../db')
+const Router = require('express-promise-router');
+const db = require('../db');
 
-const router = new Router()
+const router = new Router();
 
 const paginationWindow = 100;
 
-module.exports = router
+module.exports = router;
+
+router.get('/yo', function(req, res) {
+  res.send(yo);
+});
 
 router.get('/Contract/:id(\\d+)', async (req, res) => {
   const {id} = req.params
