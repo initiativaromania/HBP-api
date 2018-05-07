@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "",
   "main": "server.js",
-  "engines":{
+  "engines": {
     "node": "8.9.4"
   },
   "scripts": {
@@ -13,6 +13,7 @@
   "author": "george s",
   "license": "ISC",
   "dependencies": {
+    "apicache": "^1.2.1",
     "dotenv": "^4.0.0",
     "eslint": "^4.19.1",
     "express": "^4.16.3",
@@ -22,7 +23,6 @@
     "helmet": "^3.12.0",
     "memory-cache": "^0.2.0",
     "morgan": "^1.9.0",
-    "pg": "^7.4.1",
-    "pg-spice": "^2.0.1"
+    "pg": "^7.4.1"
   }
 }
