@@ -5,7 +5,11 @@ const router = new Router()
 
 const paginationWindow = 100;
 
-module.exports = router
+module.exports = router;
+
+router.get('/yo',  (req, res) => {
+  res.send(yo);
+});
 
 router.get('/Contract/:id(\\d+)', async (req, res) => {
   const {id} = req.params
@@ -415,7 +419,6 @@ router.get('/SearchAD/:pattern/:page?', async (req, res) => {
   var page = parseInt(req.params.page) || 1;
 
   var q = sql `
-    EXPLAIN ANALYZE
     SELECT
       x.id AS "ContracteId",
       x.title as "TitluContract",
