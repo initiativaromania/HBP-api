@@ -4,12 +4,9 @@ const {query, sql} = require('../db')
 const router = new Router()
 
 const paginationWindow = 100;
+const limits = require('./limits')
 
 module.exports = router;
-
-router.get('/yo',  (req, res) => {
-  res.send(yo);
-});
 
 router.get('/Contract/:id(\\d+)', async (req, res) => {
   const {id} = req.params
@@ -490,3 +487,177 @@ router.get('/TopTendercompaniesByInstitution/:id$', async (req, res) => {
   res.send(rows)
 })
 
+router.get('/report/Contracte_AD_ValoareEUR_top10', async (req, res) => {
+  const {rows} = await query(sql`
+    SELECT
+      x.id AS "ContracteId",
+      c.reg_no AS "CompanieCUI",
+      x.procedure AS "TipProcedura",
+      i.reg_no AS "InstitutiePublicaCUI",
+      x.application_no AS "NumarAnuntParticipare",
+      x.application_date::text AS "DataAnuntParticipare",
+      x.closing_type AS "TipIncheiereContract",
+      x.contract_no AS "NumarContract",
+      x.contract_date::text AS "DataContract",
+      x.title AS "TitluContract",
+      x.price AS "Valoare",
+      x.currency AS "Moneda",
+      x.price_eur AS "ValoareEUR",
+      x.price_ron AS "ValoareRON",
+      x.cpvcode AS "CPVCode",
+      x.institution AS "InstitutiePublicaID",
+      x.requests AS "NumarJustificari",
+      x.company AS "CompanieId",
+      c.name AS "NumeCompanie",
+      i.name AS "NumeInstitutie"
+    FROM contract x 
+    INNER JOIN company c ON x.company=c.id
+    INNER JOIN institution i ON x.institution=i.id
+    ORDER BY x.price_eur DESC 
+    LIMIT 10
+  `)
+  res.send(rows)
+})
+
+
+router.get('/report/Contracte_AD_ValoareEUR_top10', async (req, res) => {
+  const {rows} = await query(sql`
+    SELECT
+      x.id AS "ContracteId",
+      c.reg_no AS "CompanieCUI",
+      x.procedure AS "TipProcedura",
+      i.reg_no AS "InstitutiePublicaCUI",
+      x.application_no AS "NumarAnuntParticipare",
+      x.application_date::text AS "DataAnuntParticipare",
+      x.closing_type AS "TipIncheiereContract",
+      x.contract_no AS "NumarContract",
+      x.contract_date::text AS "DataContract",
+      x.title AS "TitluContract",
+      x.price AS "Valoare",
+      x.currency AS "Moneda",
+      x.price_eur AS "ValoareEUR",
+      x.price_ron AS "ValoareRON",
+      x.cpvcode AS "CPVCode",
+      x.institution AS "InstitutiePublicaID",
+      x.requests AS "NumarJustificari",
+      x.company AS "CompanieId",
+      c.name AS "NumeCompanie",
+      i.name AS "NumeInstitutie"
+    FROM contract x 
+    INNER JOIN company c ON x.company=c.id
+    INNER JOIN institution i ON x.institution=i.id
+    ORDER BY x.price_eur DESC 
+    LIMIT 10
+  `)
+  res.send(rows)
+})
+
+router.get('/report/Contracte_Tenders_ValoareEUR_top10', async (req, res) => {
+  const {rows} = await query(sql`
+    SELECT
+      x.id AS "LicitatiiId",
+      c.reg_no AS "CompanieCUI",
+      x.type AS "Tip",
+      x.contract_type AS "TipContract",
+      x.procedure AS "TipProcedura",
+      i.reg_no AS "InstitutiePublicaCUI",
+      x.activity_type AS "TipActivitateAC",
+      x.awarding_no AS "NumarAnuntAtribuire",
+      x.awarding_date AS "DataAnuntAtribuire",
+      x.closing_type AS "TipIncheiereContract",
+      x.awarding_criteria AS "TipCriteriiAtribuire",
+      x.is_electronic AS "CUILicitatieElectronica",
+      x.bids AS "NumarOfertePrimite",
+      x.is_subcontracted AS "Subcontractat",
+      x.contract_no AS "NumarContract",
+      x.contract_date::text AS "DataContract",
+      x.title AS "TitluContract",
+      x.price AS "Valoare",
+      x.currency AS "Moneda",
+      x.price_eur AS "ValoareEUR",
+      x.price_ron AS "ValoareRON",
+      x.cpvcode AS "CPVCode",
+      x.cpvcode_id AS "CPVCodeId",
+      x.bid_no AS "NumarAnuntParticipare",
+      x.bid_date::text as "DataAnuntParticipare",
+      x.estimated_bid_price AS "ValoareEstimataParticipare",
+      x.estimated_bid_price_currency AS "MonedaValoareEstimataParticipare",
+      x.deposits_guarantees AS "DepoziteGarantii",
+      x.financing_notes AS "ModalitatiFinantare",
+      x.institution AS "InstitutiePublicaID",
+      x.requests AS "NumarJustificari",
+      x.company AS "CompanieId",
+      c.name AS "NumeCompanie",
+      i.name AS "NumeInstitutie"
+    FROM tender x 
+    INNER JOIN company c ON x.company=c.id
+    INNER JOIN institution i ON x.institution=i.id
+    ORDER BY x.price_eur DESC 
+    LIMIT 10
+  `)
+  res.send(rows)
+})
+
+router.get('/report/Institutii_AD_top10', async (req, res) => {
+  const {rows} = await query(sql`
+    SELECT
+      x.count AS "nrAD",
+      x.institution AS "InstitutiePublicaId",
+      i.name AS "Nume",
+      i.reg_no AS "CUI"
+    FROM top_institution_contract_count x
+    INNER JOIN institution i ON x.institution=i.id
+    ORDER BY COUNT DESC LIMIT 10
+  `)
+  res.send(rows)
+})
+
+router.get('/report/Institutii_Tenders_top10', async (req, res) => {
+  const {rows} = await query(sql`
+    SELECT
+      x.count AS "nrTenders",
+      x.institution AS "InstitutiePublicaId",
+      i.name AS "Nume",
+      i.reg_no AS "CUI"
+    FROM top_institution_tender_count x
+    INNER JOIN institution i ON x.institution=i.id
+    ORDER BY COUNT DESC
+  `)
+  res.send(rows)
+})
+
+router.get('/report/Company_AD_countAD_top10', async (req, res) => {
+  const {rows} = await query(sql`
+    SELECT
+      x.count AS "nrAD",
+      x.company AS "CompanieId",
+      c.name AS "Nume"
+    FROM top_company_contract_count x
+    INNER JOIN company c ON x.company=c.id
+    ORDER BY COUNT DESC
+  `)
+  res.send(rows)
+})
+
+router.get('/report/Company_Tender_countTenders_top10', async (req, res) => {
+  const {rows} = await query(sql`
+    SELECT
+      x.count AS "nrTenders",
+      x.company AS "CompanieId",
+      c.name AS "Nume"
+    FROM top_company_tender_count x
+    INNER JOIN company c ON x.company=c.id
+    ORDER BY COUNT DESC
+  `)
+  res.send(rows)
+})
+
+router.post('/JustifyAD/:id(\\d+)', limits.JustifyContract, async (req, res) => {
+  await query(sql`UPDATE contract SET requests = coalesce(requests, 0) + 1 WHERE id=${req.params.id}`)
+  res.send("Counter was incremented")
+})
+
+router.post('/JustifyTender/:id(\\d+)', limits.JustifyTender, async (req, res) => {
+  await query(sql`UPDATE tender SET requests = coalesce(requests, 0) + 1 WHERE id=${req.params.id}`)
+  res.send("Counter was incremented")
+})
