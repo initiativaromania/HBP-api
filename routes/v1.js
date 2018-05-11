@@ -163,6 +163,29 @@ router.get('/InstitutionsByTenderCompany/:id(\\d+)', cache('30 seconds'), async 
   res.send(rows)
 })
 
+router.get('/InstitutionsByCompany/:id(\\d+)', cache('30 seconds'), async (req, res) => {
+  const {rows} = await query(sql`
+    SELECT DISTINCT ON (i.id)
+      i.id as "Id",
+      i.reg_no AS "CUI",
+      i.name AS "Nume"
+    FROM tender t
+    INNER JOIN institution as i ON i.id = t.institution
+    WHERE t.company = ${req.params.id}
+    
+    UNION
+
+    SELECT DISTINCT ON (i.id)
+      i.id as "Id",
+      i.reg_no AS "CUI",
+      i.name AS "Nume"
+    FROM contract c
+    INNER JOIN institution as i ON i.id = c.institution
+    WHERE c.company = ${req.params.id}
+  `)
+  res.send(rows)
+})
+
 router.get('/ADCompaniesByInstitution/:id(\\d+)', cache('30 seconds'), async (req, res) => {
   const {rows} = await query(sql`
     SELECT DISTINCT ON (x.id)
@@ -419,7 +442,7 @@ router.get('/SearchInstitution/:pattern', cache('30 seconds'), async (req, res) 
   res.send(rows)
 })
 
-router.get('/SearchADCompany/:pattern$|/SearchTenderCompany/:pattern$', cache('30 seconds'), async (req, res) => {
+router.get('/SearchADCompany/:pattern$|/SearchTenderCompany/:pattern$|/SearchCompany/:pattern$', cache('30 seconds'), async (req, res) => {
   const {rows} = await query(sql `
     SELECT 
       x.id AS "CompanieId",
