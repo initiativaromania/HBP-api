@@ -14,10 +14,6 @@ app.use(helmet());
 var morgan = require('morgan');
 app.use(morgan(':method :url :status :res[content-length] - :response-time ms :remote-addr'));
 
-// generic cache -- this will need to be changed for fine-grained control
-const apicache = require('apicache')
-app.use(apicache.options({debug: true}).middleware('30 seconds'))
-
 mountRoutes(app)
 
 module.exports = app

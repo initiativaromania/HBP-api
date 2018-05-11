@@ -6,9 +6,11 @@ const router = new Router()
 const paginationWindow = 100;
 const limits = require('./limits')
 
+const {cache} = require('./cache')
+
 module.exports = router;
 
-router.get('/Contract/:id(\\d+)', async (req, res) => {
+router.get('/Contract/:id(\\d+)', cache('30 seconds'), async (req, res) => {
   const {id} = req.params
   const {rows} = await query(sql`
     SELECT 
@@ -39,7 +41,7 @@ router.get('/Contract/:id(\\d+)', async (req, res) => {
   res.send(rows)
 })
 
-router.get('/Tender/:id(\\d+)', async (req, res) => {
+router.get('/Tender/:id(\\d+)', cache('30 seconds'), async (req, res) => {
   const {id} = req.params
   const {rows} = await query(sql`
     SELECT 
@@ -84,7 +86,7 @@ router.get('/Tender/:id(\\d+)', async (req, res) => {
   res.send(rows)
 })
 
-router.get('/InstitutionByCUI/:reg_no', async (req, res) => {
+router.get('/InstitutionByCUI/:reg_no', cache('30 seconds'), async (req, res) => {
   const {rows} = await query(sql`
     SELECT
       id AS "InstitutiePublicaId",
@@ -101,7 +103,7 @@ router.get('/InstitutionByCUI/:reg_no', async (req, res) => {
   res.send(rows)
 })
 
-router.get('/InstitutionById/:id(\\d+)', async (req, res) => {
+router.get('/InstitutionById/:id(\\d+)', cache('30 seconds'), async (req, res) => {
   const {rows} = await query(sql`
     SELECT
       id AS "InstitutiePublicaId",
@@ -118,7 +120,7 @@ router.get('/InstitutionById/:id(\\d+)', async (req, res) => {
   res.send(rows)
 })
 
-router.get('/InstitutionByCity/:str', async (req, res) => {
+router.get('/InstitutionByCity/:str', cache('30 seconds'), async (req, res) => {
   const {rows} = await query(sql`
     SELECT
       id AS "InstitutiePublicaId",
@@ -135,7 +137,7 @@ router.get('/InstitutionByCity/:str', async (req, res) => {
   res.send(rows)
 })
 
-router.get('/InstitutionsByADCompany/:id(\\d+)', async (req, res) => {
+router.get('/InstitutionsByADCompany/:id(\\d+)', cache('30 seconds'), async (req, res) => {
   const {rows} = await query(sql`
     SELECT DISTINCT ON (i.id)
       i.id as "Id",
@@ -148,7 +150,7 @@ router.get('/InstitutionsByADCompany/:id(\\d+)', async (req, res) => {
   res.send(rows)
 })
 
-router.get('/InstitutionsByTenderCompany/:id(\\d+)', async (req, res) => {
+router.get('/InstitutionsByTenderCompany/:id(\\d+)', cache('30 seconds'), async (req, res) => {
   const {rows} = await query(sql`
     SELECT DISTINCT ON (i.id)
       i.id as "Id",
@@ -161,7 +163,7 @@ router.get('/InstitutionsByTenderCompany/:id(\\d+)', async (req, res) => {
   res.send(rows)
 })
 
-router.get('/ADCompaniesByInstitution/:id(\\d+)', async (req, res) => {
+router.get('/ADCompaniesByInstitution/:id(\\d+)', cache('30 seconds'), async (req, res) => {
   const {rows} = await query(sql`
     SELECT DISTINCT ON (x.id)
       x.id as "CompanieId",
@@ -173,7 +175,7 @@ router.get('/ADCompaniesByInstitution/:id(\\d+)', async (req, res) => {
   res.send(rows)
 })
 
-router.get('/TenderCompaniesByInstitution/:id(\\d+)', async (req, res) => {
+router.get('/TenderCompaniesByInstitution/:id(\\d+)', cache('30 seconds'), async (req, res) => {
   const {rows} = await query(sql`
     SELECT DISTINCT ON (x.id)
       x.id as "CompanieId",
@@ -185,7 +187,28 @@ router.get('/TenderCompaniesByInstitution/:id(\\d+)', async (req, res) => {
   res.send(rows)
 })
 
-router.get('/InstitutionContracts/:id(\\d+)/:page(\\d+)?', async (req, res) => {
+router.get('/AllCompaniesByInstitution/:id(\\d+)', cache('30 seconds'), async (req, res) => {
+  const {rows} = await query(sql`
+    SELECT DISTINCT ON (x.id)
+      x.id as "CompanieId",
+      x.name AS "Nume"
+    FROM tender t
+    INNER JOIN company x ON x.id = t.company
+    WHERE t.institution = ${req.params.id}
+
+    UNION
+  
+    SELECT DISTINCT ON (x.id)
+      x.id as "CompanieId",
+      x.name AS "Nume"
+    FROM contract c
+    INNER JOIN company x ON x.id = c.company
+    WHERE c.institution = ${req.params.id}
+  `)
+  res.send(rows)
+})
+
+router.get('/InstitutionContracts/:id(\\d+)/:page(\\d+)?', cache('30 seconds'), async (req, res) => {
   var fetchAll = req.query.fetchAll === 'true'
   var page = parseInt(req.params.page) || 1;
   
@@ -207,7 +230,7 @@ router.get('/InstitutionContracts/:id(\\d+)/:page(\\d+)?', async (req, res) => {
   res.send(rows)
 })
 
-router.get('/InstitutionTenders/:id(\\d+)/:page(\\d+)?', async (req, res) => {
+router.get('/InstitutionTenders/:id(\\d+)/:page(\\d+)?', cache('30 seconds'), async (req, res) => {
   var fetchAll = req.query.fetchAll === 'true'
   var page = parseInt(req.params.page) || 1;
 
@@ -229,7 +252,7 @@ router.get('/InstitutionTenders/:id(\\d+)/:page(\\d+)?', async (req, res) => {
   res.send(rows)
 })
 
-router.get('/PublicInstitutionSummary/:id(\\d+)', async (req, res) => {
+router.get('/PublicInstitutionSummary/:id(\\d+)', cache('30 seconds'), async (req, res) => {
   const {rows} = await query(sql`
   SELECT
   ( SELECT name FROM institution where id = ${req.params.id} ) as nume_institutie,
@@ -239,21 +262,21 @@ router.get('/PublicInstitutionSummary/:id(\\d+)', async (req, res) => {
   res.send(rows)
 })
 
-router.get('/CountAD/:company_id(\\d+)', async (req, res) => {
+router.get('/CountAD/:company_id(\\d+)', cache('30 seconds'), async (req, res) => {
   const {rows} = await query(sql`
     SELECT count(*)::int AS "ADcontracts" FROM contract WHERE company=${req.params.company_id}
   `)
   res.send(rows)
 })
 
-router.get('/CountTender/:company_id(\\d+)', async (req, res) => {
+router.get('/CountTender/:company_id(\\d+)', cache('30 seconds'), async (req, res) => {
   const {rows} = await query(sql`
     SELECT count(*)::int AS "TenderContracts" FROM tender WHERE company=${req.params.company_id}
   `, req.params)
   res.send(rows)
 })
 
-router.get('/CompanyContracts/:reg_no', async (req, res) => {
+router.get('/CompanyContracts/:reg_no', cache('30 seconds'), async (req, res) => {
   const {rows} = await query(sql`
     SELECT 
       x.id AS "ContractID", 
@@ -268,7 +291,7 @@ router.get('/CompanyContracts/:reg_no', async (req, res) => {
   res.send(rows)
 })
 
-router.get('/ADCompanyContracts/:id(\\d+)/:page(\\d+)?', async (req, res) => {
+router.get('/ADCompanyContracts/:id(\\d+)/:page(\\d+)?', cache('30 seconds'), async (req, res) => {
   var fetchAll = req.query.fetchAll === 'true'
   var page = parseInt(req.params.page) || 1;
 
@@ -291,7 +314,7 @@ router.get('/ADCompanyContracts/:id(\\d+)/:page(\\d+)?', async (req, res) => {
   res.send(rows)
 })
 
-router.get('/TenderCompanyTenders/:id(\\d+)/:page(\\d+)?', async (req, res) => {
+router.get('/TenderCompanyTenders/:id(\\d+)/:page(\\d+)?', cache('30 seconds'), async (req, res) => {
   var fetchAll = req.query.fetchAll === 'true'
   var page = parseInt(req.params.page) || 1;
 
@@ -313,7 +336,7 @@ router.get('/TenderCompanyTenders/:id(\\d+)/:page(\\d+)?', async (req, res) => {
   res.send(rows)
 })
 
-router.get('/CompanyTenders/:reg_no', async (req, res) => {
+router.get('/CompanyTenders/:reg_no', cache('30 seconds'), async (req, res) => {
   const {rows} = await query(sql `
     SELECT 
       x.id AS "TenderId", 
@@ -328,7 +351,7 @@ router.get('/CompanyTenders/:reg_no', async (req, res) => {
   res.send(rows)
 })
 
-router.get('/ADCompanyByCUI/:reg_no$|/TenderCompanyByCUI/:reg_no$', async (req, res) => {
+router.get('/ADCompanyByCUI/:reg_no$|/TenderCompanyByCUI/:reg_no$', cache('30 seconds'), async (req, res) => {
   const {rows} = await query(sql `
     SELECT 
       x.id AS "CompanieId",
@@ -343,7 +366,7 @@ router.get('/ADCompanyByCUI/:reg_no$|/TenderCompanyByCUI/:reg_no$', async (req, 
   res.send(rows)
 })
 
-router.get('/ADCompany/:id(\\d+)', async (req, res) => {
+router.get('/ADCompany/:id(\\d+)', cache('30 seconds'), async (req, res) => {
   const {rows} = await query(sql `
     SELECT 
       x.id AS "CompanieId",
@@ -361,7 +384,7 @@ router.get('/ADCompany/:id(\\d+)', async (req, res) => {
   res.send(rows)
 })
 
-router.get('/TenderCompany/:id(\\d+)', async (req, res) => {
+router.get('/TenderCompany/:id(\\d+)', cache('30 seconds'), async (req, res) => {
   const {rows} = await query(sql `
     SELECT 
       x.id AS "CompanieId",
@@ -379,7 +402,7 @@ router.get('/TenderCompany/:id(\\d+)', async (req, res) => {
   res.send(rows)
 })
 
-router.get('/SearchInstitution/:pattern', async (req, res) => {
+router.get('/SearchInstitution/:pattern', cache('30 seconds'), async (req, res) => {
   const {rows} = await query(sql `
     SELECT
       id AS "InstitutiePublicaId",
@@ -396,7 +419,7 @@ router.get('/SearchInstitution/:pattern', async (req, res) => {
   res.send(rows)
 })
 
-router.get('/SearchADCompany/:pattern$|/SearchTenderCompany/:pattern$', async (req, res) => {
+router.get('/SearchADCompany/:pattern$|/SearchTenderCompany/:pattern$', cache('30 seconds'), async (req, res) => {
   const {rows} = await query(sql `
     SELECT 
       x.id AS "CompanieId",
@@ -411,7 +434,7 @@ router.get('/SearchADCompany/:pattern$|/SearchTenderCompany/:pattern$', async (r
   res.send(rows)
 })
 
-router.get('/SearchAD/:pattern/:page?', async (req, res) => {
+router.get('/SearchAD/:pattern/:page?', cache('30 seconds'), async (req, res) => {
   var fetchAll = req.query.fetchAll === 'true'
   var page = parseInt(req.params.page) || 1;
 
@@ -431,7 +454,7 @@ router.get('/SearchAD/:pattern/:page?', async (req, res) => {
   res.send(rows)
 })
 
-router.get('/SearchTender/:pattern/:page?', async (req, res) => {
+router.get('/SearchTender/:pattern/:page?', cache('30 seconds'), async (req, res) => {
   var fetchAll = req.query.fetchAll === 'true'
   var page = parseInt(req.params.page) || 1;
 
@@ -451,7 +474,7 @@ router.get('/SearchTender/:pattern/:page?', async (req, res) => {
   res.send(rows)
 })
 
-router.get('/TopADcompaniesByInstitution/:id$', async (req, res) => {
+router.get('/TopADcompaniesByInstitution/:id$', cache('30 seconds'), async (req, res) => {
   const {rows} = await query(sql `
     WITH main AS (
       SELECT company, sum(price_ron) AS total FROM contract
@@ -469,7 +492,7 @@ router.get('/TopADcompaniesByInstitution/:id$', async (req, res) => {
   res.send(rows)
 })
 
-router.get('/TopTendercompaniesByInstitution/:id$', async (req, res) => {
+router.get('/TopTendercompaniesByInstitution/:id$', cache('30 seconds'), async (req, res) => {
   const {rows} = await query(sql `
     WITH main AS (
       SELECT company, sum(price_ron) AS total FROM tender
@@ -487,7 +510,7 @@ router.get('/TopTendercompaniesByInstitution/:id$', async (req, res) => {
   res.send(rows)
 })
 
-router.get('/report/Contracte_AD_ValoareEUR_top10', async (req, res) => {
+router.get('/report/Contracte_AD_ValoareEUR_top10', cache('30 seconds'), async (req, res) => {
   const {rows} = await query(sql`
     SELECT
       x.id AS "ContracteId",
@@ -520,7 +543,7 @@ router.get('/report/Contracte_AD_ValoareEUR_top10', async (req, res) => {
 })
 
 
-router.get('/report/Contracte_AD_ValoareEUR_top10', async (req, res) => {
+router.get('/report/Contracte_AD_ValoareEUR_top10', cache('30 seconds'), async (req, res) => {
   const {rows} = await query(sql`
     SELECT
       x.id AS "ContracteId",
@@ -552,7 +575,7 @@ router.get('/report/Contracte_AD_ValoareEUR_top10', async (req, res) => {
   res.send(rows)
 })
 
-router.get('/report/Contracte_Tenders_ValoareEUR_top10', async (req, res) => {
+router.get('/report/Contracte_Tenders_ValoareEUR_top10', cache('30 seconds'), async (req, res) => {
   const {rows} = await query(sql`
     SELECT
       x.id AS "LicitatiiId",
@@ -598,7 +621,7 @@ router.get('/report/Contracte_Tenders_ValoareEUR_top10', async (req, res) => {
   res.send(rows)
 })
 
-router.get('/report/Institutii_AD_top10', async (req, res) => {
+router.get('/report/Institutii_AD_top10', cache('30 seconds'), async (req, res) => {
   const {rows} = await query(sql`
     SELECT
       x.count AS "nrAD",
@@ -612,7 +635,7 @@ router.get('/report/Institutii_AD_top10', async (req, res) => {
   res.send(rows)
 })
 
-router.get('/report/Institutii_Tenders_top10', async (req, res) => {
+router.get('/report/Institutii_Tenders_top10', cache('30 seconds'), async (req, res) => {
   const {rows} = await query(sql`
     SELECT
       x.count AS "nrTenders",
@@ -626,7 +649,7 @@ router.get('/report/Institutii_Tenders_top10', async (req, res) => {
   res.send(rows)
 })
 
-router.get('/report/Company_AD_countAD_top10', async (req, res) => {
+router.get('/report/Company_AD_countAD_top10', cache('30 seconds'), async (req, res) => {
   const {rows} = await query(sql`
     SELECT
       x.count AS "nrAD",
@@ -639,7 +662,7 @@ router.get('/report/Company_AD_countAD_top10', async (req, res) => {
   res.send(rows)
 })
 
-router.get('/report/Company_Tender_countTenders_top10', async (req, res) => {
+router.get('/report/Company_Tender_countTenders_top10', cache('30 seconds'), async (req, res) => {
   const {rows} = await query(sql`
     SELECT
       x.count AS "nrTenders",
