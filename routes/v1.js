@@ -437,7 +437,7 @@ router.get('/SearchInstitution/:pattern', cache('30 seconds'), async (req, res) 
       longitude(geo) AS long,
       latitude(geo) AS lat,
       version
-    FROM institution WHERE name ilike '%' || ${preq.params.attern} || '%'
+    FROM institution WHERE name ilike '%' || ${req.params.attern} || '%'
   `)
   res.send(rows)
 })

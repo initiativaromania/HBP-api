@@ -29,5 +29,8 @@ router.get('/contract/:id(\\d+)', cache('30 seconds'), async (req, res) => {
     INNER JOIN company c ON c.id=x.company
     INNER JOIN institution i ON i.id=x.institution
     WHERE x.id=${id}`)
-  res.send(rows)
+  if (!rows.length) {
+    res.status(404).send({message:"Resource cannot be found"})
+  }
+  res.send(rows[0])
 })
