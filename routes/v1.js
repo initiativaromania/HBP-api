@@ -715,15 +715,16 @@ router.get('/report/Company_Tender_countTenders_top10', cache('3 days'), async (
 })
 
 router.get('/report/general_stats', cache('3 days'), async (req, res) => {
-  const {rows} = await query(sql`
+  const {rows: [ret]} = await query(sql`
     SELECT 
       sum(contract_count) as contracts,
       sum(tender_count) as tenders,
-      count(distinct institution) as institutions,
+      count(distinct institution) as active_institutions,
+      (SELECT count(*) FROM institution) as institutions,
       count(distinct company) as companies
     FROM statistics;
   `)
-  res.send(rows[0])
+  res.send(ret)
 })
 
 router.post('/JustifyAD/:id(\\d+)', limits.JustifyContract, async (req, res) => {
