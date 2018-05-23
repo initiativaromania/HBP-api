@@ -720,7 +720,7 @@ router.get('/report/general_stats', cache('3 days'), async (req, res) => {
       sum(contract_count) as contracts,
       sum(tender_count) as tenders,
       count(distinct institution) as institutions,
-      count(distinct company) as company
+      count(distinct company) as companies
     FROM statistics;
   `)
   res.send(rows[0])
