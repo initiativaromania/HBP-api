@@ -644,58 +644,86 @@ router.get('/report/Contracte_Tenders_ValoareEUR_top10', cache('30 seconds'), as
   res.send(rows)
 })
 
-router.get('/report/Institutii_AD_top10', cache('30 seconds'), async (req, res) => {
+router.get('/report/Institutii_AD_top10', cache('3 days'), async (req, res) => {
   const {rows} = await query(sql`
     SELECT
       x.count AS "nrAD",
       x.institution AS "InstitutiePublicaId",
       i.name AS "Nume",
       i.reg_no AS "CUI"
-    FROM top_institution_contract_count x
+    FROM (
+      SELECT institution, SUM(contract_count) AS count
+      FROM statistics WHERE contract_count IS NOT NULL 
+      GROUP BY institution ORDER BY count DESC LIMIT 10
+    ) x
     INNER JOIN institution i ON x.institution=i.id
-    ORDER BY COUNT DESC LIMIT 10
+    ORDER BY COUNT DESC
   `)
   res.send(rows)
 })
 
-router.get('/report/Institutii_Tenders_top10', cache('30 seconds'), async (req, res) => {
+router.get('/report/Institutii_Tenders_top10', cache('3 days'), async (req, res) => {
   const {rows} = await query(sql`
     SELECT
       x.count AS "nrTenders",
       x.institution AS "InstitutiePublicaId",
       i.name AS "Nume",
       i.reg_no AS "CUI"
-    FROM top_institution_tender_count x
+    FROM (
+      SELECT institution, SUM(tender_count) AS count
+      FROM statistics WHERE tender_count IS NOT NULL 
+      GROUP BY institution ORDER BY count DESC LIMIT 10
+    ) x
     INNER JOIN institution i ON x.institution=i.id
     ORDER BY COUNT DESC
   `)
   res.send(rows)
 })
 
-router.get('/report/Company_AD_countAD_top10', cache('30 seconds'), async (req, res) => {
+router.get('/report/Company_AD_countAD_top10', cache('3 days'), async (req, res) => {
   const {rows} = await query(sql`
     SELECT
       x.count AS "nrAD",
       x.company AS "CompanieId",
       c.name AS "Nume"
-    FROM top_company_contract_count x
+    FROM (
+      SELECT company, SUM(contract_count) AS count
+      FROM statistics WHERE contract_count IS NOT NULL 
+      GROUP BY company ORDER BY count DESC LIMIT 10
+    ) x
     INNER JOIN company c ON x.company=c.id
     ORDER BY COUNT DESC
   `)
   res.send(rows)
 })
 
-router.get('/report/Company_Tender_countTenders_top10', cache('30 seconds'), async (req, res) => {
+router.get('/report/Company_Tender_countTenders_top10', cache('3 days'), async (req, res) => {
   const {rows} = await query(sql`
     SELECT
       x.count AS "nrTenders",
       x.company AS "CompanieId",
       c.name AS "Nume"
-    FROM top_company_tender_count x
+    FROM (
+      SELECT company, SUM(tender_count) AS count
+      FROM statistics WHERE tender_count IS NOT NULL 
+      GROUP BY company ORDER BY count DESC LIMIT 10
+    ) x
     INNER JOIN company c ON x.company=c.id
     ORDER BY COUNT DESC
   `)
   res.send(rows)
+})
+
+router.get('/report/general_stats', cache('3 days'), async (req, res) => {
+  const {rows} = await query(sql`
+    SELECT 
+      sum(contract_count) as contracts,
+      sum(tender_count) as tenders,
+      count(distinct institution) as institutions,
+      count(distinct company) as company
+    FROM statistics;
+  `)
+  res.send(rows[0])
 })
 
 router.post('/JustifyAD/:id(\\d+)', limits.JustifyContract, async (req, res) => {
