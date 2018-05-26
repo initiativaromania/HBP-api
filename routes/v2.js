@@ -14,9 +14,41 @@ router.get('/institutions', cache('3 days'), async(req, res) => {
   res.send(rows)
 })
 
+router.get('/institution_summary/:id(\\d+)', cache('30 seconds'), async(req, res) => {
+  const {rows: [ret]} = await query(sql`
+    WITH foo AS (
+      SELECT institution, SUM(contract_count) AS contracts, SUM(tender_count) AS tenders
+      FROM statistics GROUP BY institution 
+    )
+    SELECT 
+      i.name, COALESCE(foo.contracts, 0) AS contracts, COALESCE(foo.tenders, 0) AS tenders
+    FROM institution i 
+    LEFT JOIN foo ON foo.institution=i.id
+    WHERE i.id=${req.params.id}
+  `)
+  res.send(ret)
+})
+
+router.get('/institution/:id(\\d+)', cache('30 seconds'), async (req, res) => {
+  const {rows} = await query(sql`
+    SELECT
+      id,
+      county,
+      reg_no,
+      name,
+      locality,
+      address,
+      longitude(geo) AS long,
+      latitude(geo) AS lat,
+      version
+    FROM institution where id=${req.params.id}
+    `)
+  res.send(rows)
+})
+
 router.get('/contract/:id(\\d+)', cache('30 seconds'), async (req, res) => {
   const {id} = req.params
-  const {rows} = await query(sql`
+  const {rows: [ret]} = await query(sql`
     SELECT 
       x.id, x.procedure, x.application_no, x.application_date::text, x.closing_type, 
       x.contract_no, x.contract_date::text, x.title, x.price, x.currency, x.price_eur, x.price_ron, x.cpvcode,
@@ -29,8 +61,6 @@ router.get('/contract/:id(\\d+)', cache('30 seconds'), async (req, res) => {
     INNER JOIN company c ON c.id=x.company
     INNER JOIN institution i ON i.id=x.institution
     WHERE x.id=${id}`)
-  if (!rows.length) {
-    res.status(404).send({message:"Resource cannot be found"})
-  }
-  res.send(rows[0])
+  if (!ret) res.status(404).send({message:"Resource cannot be found"})
+  else res.send(ret)
 })
