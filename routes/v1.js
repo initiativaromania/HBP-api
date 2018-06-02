@@ -165,23 +165,14 @@ router.get('/InstitutionsByTenderCompany/:id(\\d+)', cache('30 seconds'), async 
 
 router.get('/InstitutionsByCompany/:id(\\d+)', cache('30 seconds'), async (req, res) => {
   const {rows} = await query(sql`
-    SELECT DISTINCT ON (i.id)
-      i.id as "Id",
+    SELECT
+      i.id AS "Id",
       i.reg_no AS "CUI",
-      i.name AS "Nume"
-    FROM tender t
-    INNER JOIN institution as i ON i.id = t.institution
-    WHERE t.company = ${req.params.id}
-    
-    UNION
-
-    SELECT DISTINCT ON (i.id)
-      i.id as "Id",
-      i.reg_no AS "CUI",
-      i.name AS "Nume"
-    FROM contract c
-    INNER JOIN institution as i ON i.id = c.institution
-    WHERE c.company = ${req.params.id}
+      i.name AS "Nume",
+      s.contract_count, s.contract_total_ron, s.contract_total_eur,
+      s.tender_count, s.tender_total_ron, s.tender_total_eur
+    FROM statistics s INNER JOIN institution i ON i.id=s.institution
+    WHERE s.company = ${req.params.id}
   `)
   res.send(rows)
 })
@@ -212,21 +203,13 @@ router.get('/TenderCompaniesByInstitution/:id(\\d+)', cache('30 seconds'), async
 
 router.get('/AllCompaniesByInstitution/:id(\\d+)', cache('30 seconds'), async (req, res) => {
   const {rows} = await query(sql`
-    SELECT DISTINCT ON (x.id)
-      x.id as "CompanieId",
-      x.name AS "Nume"
-    FROM tender t
-    INNER JOIN company x ON x.id = t.company
-    WHERE t.institution = ${req.params.id}
-
-    UNION
-  
-    SELECT DISTINCT ON (x.id)
-      x.id as "CompanieId",
-      x.name AS "Nume"
-    FROM contract c
-    INNER JOIN company x ON x.id = c.company
-    WHERE c.institution = ${req.params.id}
+    SELECT
+      c.id AS "CompanieId",
+      c.name AS "Nume",
+      s.contract_count, s.contract_total_ron, s.contract_total_eur,
+      s.tender_count, s.tender_total_ron, s.tender_total_eur
+    FROM statistics s INNER JOIN company c ON c.id=s.company
+    WHERE s.institution = ${req.params.id}
   `)
   res.send(rows)
 })
@@ -425,6 +408,25 @@ router.get('/TenderCompany/:id(\\d+)', cache('30 seconds'), async (req, res) => 
   res.send(rows)
 })
 
+router.get('/Company/:id(\\d+)', cache('30 seconds'), async (req, res) => {
+  const {rows} = await query(sql `
+    SELECT 
+      x.id AS "CompanieId",
+      x.name AS "Nume",
+      x.reg_no AS "CUI",
+      x.country AS "Tara",
+      x.locality AS "Localitate",
+      x.address AS "Adresa",
+      COALESCE(SUM(s.tender_count), 0) AS "NrLicitatii",
+      COALESCE(SUM(s.contract_count), 0) AS "NrContracte"
+    FROM company x
+    LEFT JOIN statistics s ON s.company=x.id
+    WHERE x.id = ${req.params.id}
+    GROUP BY x.id
+  `)
+  res.send(rows[0])
+})
+
 router.get('/SearchInstitution/:pattern', cache('30 seconds'), async (req, res) => {
   const {rows} = await query(sql `
     SELECT
@@ -499,36 +501,26 @@ router.get('/SearchTender/:pattern/:page?', cache('30 seconds'), async (req, res
 
 router.get('/TopADcompaniesByInstitution/:id$', cache('30 seconds'), async (req, res) => {
   const {rows} = await query(sql `
-    WITH main AS (
-      SELECT company, sum(price_ron) AS total FROM contract
-      WHERE institution=${req.params.id}
-      GROUP by company
-    )
     SELECT 
       c.id AS "CompanieId",
       c.name AS "Nume",
-      total
-    FROM main INNER JOIN company c ON main.company = c.id
-    ORDER BY total DESC
-    LIMIT 10
+      s.contract_total_ron AS "Total"
+    FROM statistics2 s INNER JOIN company c ON s.company = c.id
+    WHERE s.institution=${req.params.id} AND s.contract_total_ron IS NOT NULL
+    ORDER BY s.contract_total_ron DESC LIMIT 10;
   `)
   res.send(rows)
 })
 
 router.get('/TopTendercompaniesByInstitution/:id$', cache('30 seconds'), async (req, res) => {
   const {rows} = await query(sql `
-    WITH main AS (
-      SELECT company, sum(price_ron) AS total FROM tender
-      WHERE institution=${req.params.id}
-      GROUP by company
-    )
     SELECT 
       c.id AS "CompanieId",
       c.name AS "Nume",
-      total
-    FROM main INNER JOIN company c ON main.company = c.id
-    ORDER BY total DESC
-    LIMIT 10
+      s.tender_total_ron AS "Total"
+    FROM statistics2 s INNER JOIN company c ON s.company = c.id
+    WHERE s.institution=${req.params.id} AND s.tender_total_ron IS NOT NULL
+    ORDER BY s.tender_total_ron DESC LIMIT 10;
   `)
   res.send(rows)
 })
@@ -650,7 +642,8 @@ router.get('/report/Institutii_AD_top10', cache('3 days'), async (req, res) => {
       x.count AS "nrAD",
       x.institution AS "InstitutiePublicaId",
       i.name AS "Nume",
-      i.reg_no AS "CUI"
+      i.reg_no AS "CUI",
+      count
     FROM (
       SELECT institution, SUM(contract_count) AS count
       FROM statistics WHERE contract_count IS NOT NULL 
