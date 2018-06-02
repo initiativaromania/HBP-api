@@ -374,7 +374,7 @@ router.get('/CompanyTenders/:reg_no', cache('30 seconds'), async (req, res) => {
   res.send(rows)
 })
 
-router.get('/ADCompanyByCUI/:reg_no$|/TenderCompanyByCUI/:reg_no$', cache('30 seconds'), async (req, res) => {
+router.get('/ADCompanyByCUI/:reg_no$|/TenderCompanyByCUI/:reg_no$|/CompanyByCUI/:reg_no$', cache('30 seconds'), async (req, res) => {
   const {rows} = await query(sql `
     SELECT 
       x.id AS "CompanieId",
