@@ -11,6 +11,9 @@ const config = {
 
 const pool = new pg.Pool(config)
 
+const DATE_OID = 1082
+pg.types.setTypeParser(DATE_OID, val => val.toString())
+
 module.exports = {
   sql: function(strings, ...params) {return {strings, params}},
   query: function(...parts)
@@ -20,6 +23,10 @@ module.exports = {
     var idx = 1
     parts.forEach(part => {
       if (part===null) return
+      if (typeof part === 'string') {
+        text += part
+        return
+      }
       text += part.strings[0]
 
       part.params.forEach((param, i) => {
@@ -30,4 +37,3 @@ module.exports = {
     return pool.query(text, params)
   }
 }
-
