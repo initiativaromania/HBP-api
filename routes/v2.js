@@ -189,7 +189,7 @@ router.get('/contract/:id(\\d+)', cache('30 seconds'), async (req, res) => {
     SELECT 
       x.id, x.procedure, x.application_no, x.application_date::text, x.closing_type, 
       x.contract_no, x.contract_date::text, x.title, x.price, x.currency, x.price_eur, x.price_ron, x.cpvcode,
-      x.institution, x.requests, x.company,
+      x.institution, COALESCE(x.requests, 0) AS requests, x.company,
       c.reg_no as company_reg_no,
       c.name AS company_name,
       i.reg_no AS institution_reg_no,

@@ -30,7 +30,7 @@ router.get('/Contract/:id(\\d+)', cache('30 seconds'), async (req, res) => {
       x.price_ron AS "ValoareRON",
       x.cpvcode AS "CPVCode",
       x.institution AS "InstitutiePublicaID",
-      x.requests AS "NumarJustificari",
+      COALESCE(x.requests, 0) AS "NumarJustificari",
       x.company AS "CompanieId",
       c.name AS "NumeCompanie",
       i.name AS "NumeInstitutie"
@@ -75,7 +75,7 @@ router.get('/Tender/:id(\\d+)', cache('30 seconds'), async (req, res) => {
       x.deposits_guarantees AS "DepoziteGarantii",
       x.financing_notes AS "ModalitatiFinantare",
       x.institution AS "InstitutiePublicaID",
-      x.requests AS "NumarJustificari",
+      COALESCE(x.requests, 0) AS "NumarJustificari",
       x.company AS "CompanieId",
       c.name AS "NumeCompanie",
       i.name AS "NumeInstitutie"
@@ -544,7 +544,7 @@ router.get('/report/Contracte_AD_ValoareEUR_top10', cache('30 seconds'), async (
       x.price_ron AS "ValoareRON",
       x.cpvcode AS "CPVCode",
       x.institution AS "InstitutiePublicaID",
-      x.requests AS "NumarJustificari",
+      COALESCE(x.requests, 0) AS "NumarJustificari",
       x.company AS "CompanieId",
       c.name AS "NumeCompanie",
       i.name AS "NumeInstitutie"
@@ -577,7 +577,7 @@ router.get('/report/Contracte_AD_ValoareEUR_top10', cache('30 seconds'), async (
       x.price_ron AS "ValoareRON",
       x.cpvcode AS "CPVCode",
       x.institution AS "InstitutiePublicaID",
-      x.requests AS "NumarJustificari",
+      COALESCE(x.requests, 0) AS "NumarJustificari",
       x.company AS "CompanieId",
       c.name AS "NumeCompanie",
       i.name AS "NumeInstitutie"
@@ -623,7 +623,7 @@ router.get('/report/Contracte_Tenders_ValoareEUR_top10', cache('30 seconds'), as
       x.deposits_guarantees AS "DepoziteGarantii",
       x.financing_notes AS "ModalitatiFinantare",
       x.institution AS "InstitutiePublicaID",
-      x.requests AS "NumarJustificari",
+      COALESCE(x.requests, 0) AS "NumarJustificari",
       x.company AS "CompanieId",
       c.name AS "NumeCompanie",
       i.name AS "NumeInstitutie"
