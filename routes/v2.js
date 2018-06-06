@@ -151,16 +151,19 @@ router.get('/institution_stats/:id(\\d+)', cache('30 seconds'), async(req, res) 
   `)
 
   const {rows: cpv} = await query(sql`
-    WITH foo AS (
-      SELECT substring(cpvcode, 1, 2) AS category, SUM(price_ron) AS total 
+    WITH cg AS ( SELECT category, SUM(price_ron) AS total FROM (
+      SELECT substring(cpvcode, 1, 2) AS category, price_ron
       FROM contract c WHERE c.institution=${req.params.id} 
         AND contract_date BETWEEN ${start}::date AND ${end}::date
-      GROUP BY 1
-    )
-    SELECT * FROM (SELECT * FROM foo ORDER BY total DESC LIMIT 20) foo2
+      UNION ALL
+      SELECT SUBSTRING(cpvcode, 1, 2) AS category, price_ron
+      FROM tender t WHERE t.institution=${req.params.id}
+        AND contract_date BETWEEN ${start}::date AND ${end}::date
+    ) cx GROUP BY 1)
+    SELECT * FROM (SELECT * FROM cg ORDER BY total DESC LIMIT 20) fin
       UNION ALL
     SELECT 'xx' AS category, SUM(total) AS total FROM 
-    (SELECT total FROM foo ORDER BY total DESC OFFSET 20) foo2;
+    (SELECT total FROM cg ORDER BY total DESC OFFSET 20) fin;
   `)
 
   res.send({details, hist, cpv})
@@ -316,6 +319,7 @@ router.get('/institution/:id(\\d+)/contracts', cache('30 seconds'), async (req, 
   if (['title', 'price_ron', 'contract_date'].includes(sortBy)) {
     items_q.push(` ORDER BY ${sortBy} `)
     if (sortDesc==="true") items_q.push(' DESC ')
+    items_q.push(' NULLS LAST ')
   }
   items_q.push(sql` LIMIT ${perPage} OFFSET ${(page-1)*perPage};`)
 
@@ -350,8 +354,8 @@ router.get('/institution/:id(\\d+)/companies', cache('30 seconds'), async (req, 
     INNER JOIN statistics s ON s.company=c.id
     WHERE s.institution = ${req.params.id}`
   let count_q = ['SELECT COUNT(*) ', main_q]
-  let items_q = [`SELECT c.id, c.name, s.contract_count, s.contract_total_eur, 
-      s.contract_total_ron, s.tender_count, s.tender_total_eur, s.tender_total_ron `, main_q]
+  let items_q = [`SELECT c.id, c.name, COALESCE(s.contract_count, 0) AS contract_count, s.contract_total_eur, 
+      s.contract_total_ron, COALESCE(s.tender_count, 0) AS tender_count, s.tender_total_eur, s.tender_total_ron `, main_q]
 
   const allowed_fields = ['name', 'contract_count', 'contract_total_eur', 
     'contract_total_ron', 'tender_count', 'tender_total_eur', 'tender_total_ron']
@@ -359,6 +363,162 @@ router.get('/institution/:id(\\d+)/companies', cache('30 seconds'), async (req, 
   if (allowed_fields.includes(sortBy)) {
     items_q.push(` ORDER BY ${sortBy} `)
     if (sortDesc==="true") items_q.push(' DESC ')
+  }
+  items_q.push(sql` LIMIT ${perPage} OFFSET ${(page-1)*perPage};`)
+
+  const {rows: [{count}]} = await query(...count_q)
+  const {rows: items} = await query(...items_q)
+
+  res.send({items, count})
+})
+
+router.get('/company_stats/:id(\\d+)', cache('30 seconds'), async(req, res) => {
+  let start = req.query.start || '2007-01-01'
+  let end = moment(req.query.end).local() || moment().local()
+  let diff = moment.duration(end.diff(moment(start).local()))
+  let unitMul = 1
+  let thresholdMin = 32
+  let thresholdMax = 64
+  units = Math.round(diff.asDays())
+  while (units / unitMul > thresholdMax) { unitMul++ }
+
+  const {rows: [details]} = await query(sql`
+    SELECT c.id, c.name, 
+      c.country,
+      c.reg_no,
+      c.name,
+      c.locality,
+      c.address,
+      COALESCE(SUM(s.contract_count), 0) AS contract_count, COALESCE(SUM(s.tender_count), 0) AS tender_count,
+      COALESCE(SUM(s.contract_total_ron), 0) AS contract_total_ron,
+      COALESCE(SUM(s.tender_total_ron), 0) AS tender_total_ron
+    FROM company c
+    LEFT JOIN statistics s ON s.company = c.id
+    WHERE c.id = ${req.params.id}
+    GROUP BY c.id;`)
+  
+  const {rows: hist} = await query(sql`
+    WITH d AS (
+      SELECT 
+      ser,
+      ${start}::date + ser + ${Math.floor(unitMul/2)}::int AS date,
+      ${start}::date + ser AS start_date,
+      ${start}::date + ser + ${unitMul-1}::int AS end_date
+      FROM generate_series(0, ${units}-1, ${unitMul}) ser
+    ), cx AS (
+      SELECT
+        ser,
+        COALESCE(SUM(c.price_ron), 0) AS total_ron,
+        COALESCE(SUM(c.price_eur), 0) AS total_eur,
+        COALESCE(COUNT(c.id)) AS count
+      FROM d
+      LEFT JOIN contract c ON c.contract_date BETWEEN d.start_date AND d.end_date
+        AND c.company = ${req.params.id}
+      GROUP BY ser
+    ), tx AS (
+      SELECT
+        ser,
+        COALESCE(SUM(c.price_ron), 0) AS total_ron,
+        COALESCE(SUM(c.price_eur), 0) AS total_eur,
+        COALESCE(COUNT(c.id)) AS count
+      FROM d
+      LEFT JOIN tender c ON c.contract_date BETWEEN d.start_date AND d.end_date
+        AND c.company = ${req.params.id}
+      GROUP BY ser
+    )
+    SELECT 
+      d.date, d.start_date, d.end_date, 
+      cx.total_ron AS contract_total_ron, cx.total_eur AS contract_total_eur, cx.count AS contract_count,
+      tx.total_ron AS tender_total_ron, tx.total_eur AS tender_total_eur, tx.count AS tender_count
+    FROM d INNER JOIN cx ON cx.ser=d.ser INNER JOIN tx ON tx.ser=d.ser
+  `)
+
+  const {rows: cpv} = await query(sql`
+    WITH cg AS ( SELECT category, SUM(price_ron) AS total FROM (
+      SELECT substring(cpvcode, 1, 2) AS category, price_ron
+      FROM contract c WHERE c.company=${req.params.id} 
+        AND contract_date BETWEEN ${start}::date AND ${end}::date
+      UNION ALL
+      SELECT SUBSTRING(cpvcode, 1, 2) AS category, price_ron
+      FROM tender t WHERE t.company=${req.params.id}
+        AND contract_date BETWEEN ${start}::date AND ${end}::date
+    ) cx GROUP BY 1)
+    SELECT * FROM (SELECT * FROM cg ORDER BY total DESC LIMIT 20) fin
+      UNION ALL
+    SELECT 'xx' AS category, SUM(total) AS total FROM 
+    (SELECT total FROM cg ORDER BY total DESC OFFSET 20) fin;
+  `)
+
+  const {rows: map} = await query(sql`
+    SELECT county, SUM(price_ron) AS total FROM (
+      SELECT i.county, price_ron
+      FROM contract c INNER JOIN institution i ON i.id=c.institution
+      WHERE c.company=${req.params.id}
+      AND contract_date BETWEEN ${start}::date AND ${end}::date
+      UNION ALL
+      SELECT i.county, price_ron
+      FROM tender t INNER JOIN institution i ON i.id=t.institution
+      WHERE t.company=${req.params.id}
+      AND contract_date BETWEEN ${start}::date AND ${end}::date
+    ) subq GROUP BY subq.county
+  `)
+
+  res.send({details, hist, cpv, map})
+})
+
+router.get('/company/:id(\\d+)/contracts', cache('30 seconds'), async (req, res) => {
+  const {page=1, perPage=10, sortBy, sortDesc=false} = req.query
+  let main_q = sql` FROM contract WHERE company = ${req.params.id}`
+  let count_q = ['SELECT COUNT(*) ', main_q]
+  let items_q = ['SELECT id, title, contract_date, price_ron', main_q]
+
+  if (['title', 'price_ron', 'contract_date'].includes(sortBy)) {
+    items_q.push(` ORDER BY ${sortBy} `)
+    if (sortDesc==="true") items_q.push(' DESC ')
+  }
+  items_q.push(sql` LIMIT ${perPage} OFFSET ${(page-1)*perPage};`)
+
+  const {rows: [{count}]} = await query(...count_q)
+  const {rows: items} = await query(...items_q)
+
+  res.send({items, count})
+})
+
+router.get('/company/:id(\\d+)/tenders', cache('30 seconds'), async (req, res) => {
+  const {page=1, perPage=10, sortBy, sortDesc=false} = req.query
+  let main_q = sql` FROM tender WHERE company = ${req.params.id}`
+  let count_q = ['SELECT COUNT(*) ', main_q]
+  let items_q = ['SELECT id, title, contract_date, price_ron', main_q]
+
+  if (['title', 'price_ron', 'contract_date'].includes(sortBy)) {
+    items_q.push(` ORDER BY ${sortBy} `)
+    if (sortDesc==="true") items_q.push(' DESC ')
+  }
+  items_q.push(sql` LIMIT ${perPage} OFFSET ${(page-1)*perPage};`)
+
+  const {rows: [{count}]} = await query(...count_q)
+  const {rows: items} = await query(...items_q)
+
+  res.send({items, count})
+})
+
+router.get('/company/:id(\\d+)/institutions', cache('30 seconds'), async (req, res) => {
+  const {page=1, perPage=10, sortBy, sortDesc=false} = req.query
+  let main_q = sql` 
+    FROM institution i 
+    INNER JOIN statistics s ON s.institution=i.id
+    WHERE s.company = ${req.params.id}`
+  let count_q = ['SELECT COUNT(*) ', main_q]
+  let items_q = [`SELECT i.id, i.name, COALESCE(s.contract_count, 0) AS contract_count, s.contract_total_eur, 
+      s.contract_total_ron, COALESCE(s.tender_count, 0) AS tender_count, s.tender_total_eur, s.tender_total_ron `, main_q]
+
+  const allowed_fields = ['name', 'contract_count', 'contract_total_eur', 
+    'contract_total_ron', 'tender_count', 'tender_total_eur', 'tender_total_ron']
+  
+  if (allowed_fields.includes(sortBy)) {
+    items_q.push(` ORDER BY ${sortBy} `)
+    if (sortDesc==="true") items_q.push(' DESC ')
+    items_q.push(' NULLS LAST ')
   }
   items_q.push(sql` LIMIT ${perPage} OFFSET ${(page-1)*perPage};`)
 
