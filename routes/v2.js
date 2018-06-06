@@ -273,7 +273,8 @@ router.get('/stats', cache('3 days'), async (req, res) => {
     SELECT
       x.count,
       c.id,
-      c.name
+      c.name,
+      c.reg_no
     FROM (
       SELECT company, SUM(contract_count) AS count
       FROM statistics WHERE contract_count IS NOT NULL 
@@ -286,7 +287,8 @@ router.get('/stats', cache('3 days'), async (req, res) => {
     SELECT
       x.count,
       c.id,
-      c.name
+      c.name,
+      c.reg_no
     FROM (
       SELECT company, SUM(tender_count) AS count
       FROM statistics WHERE tender_count IS NOT NULL 
