@@ -84,6 +84,7 @@ router.get('/institution_summary/:id(\\d+)', cache('30 seconds'), async(req, res
     LEFT JOIN statistics s ON s.institution = i.id
     WHERE i.id = ${req.params.id}
     GROUP BY i.id;`)
+    
   res.send(details)
 })
 
@@ -447,7 +448,7 @@ router.get('/company_stats/:id(\\d+)', cache('30 seconds'), async(req, res) => {
     ) cx GROUP BY 1)
     SELECT * FROM (SELECT * FROM cg ORDER BY total DESC LIMIT 20) fin
       UNION ALL
-    SELECT 'xx' AS category, SUM(total) AS total FROM 
+    SELECT 'others' AS category, SUM(total) AS total FROM 
     (SELECT total FROM cg ORDER BY total DESC OFFSET 20) fin;
   `)
 
@@ -528,4 +529,152 @@ router.get('/company/:id(\\d+)/institutions', cache('30 seconds'), async (req, r
   const {rows: items} = await query(...items_q)
 
   res.send({items, count})
+})
+
+router.get('/search/contract/:pattern', cache('30 seconds'), async (req, res) => {
+  const {page=1, perPage=10, sortBy, sortDesc=false} = req.query
+
+  let main_q = sql `
+    FROM contract x
+    WHERE to_tsvector('romanian', x.title) @@ plainto_tsquery('romanian', ${req.params.pattern})
+  `
+  let count_q = ['SELECT COUNT(*) ', main_q]
+  let items_q = [
+    `SELECT
+      x.id,
+      x.title,
+      x.price_ron,
+      x.contract_date `,
+    main_q]
+  
+  const allowed_fields = ['title', 'price_ron', 'contract_date']
+
+  if (allowed_fields.includes(sortBy)) {
+    items_q.push(` ORDER BY ${sortBy} `)
+    if (sortDesc==="true") items_q.push(' DESC ')
+    items_q.push(' NULLS LAST ')
+  }
+  items_q.push(sql` LIMIT ${perPage} OFFSET ${(page-1)*perPage};`)
+
+  const {rows: [{count}]} = await query(...count_q)
+  const {rows: items} = await query(...items_q)
+
+  res.send({items, count})
+})
+
+router.get('/search/tender/:pattern', cache('30 seconds'), async (req, res) => {
+  const {page=1, perPage=10, sortBy, sortDesc=false} = req.query
+
+  let main_q = sql `
+    FROM tender x
+    WHERE to_tsvector('romanian', x.title) @@ plainto_tsquery('romanian', ${req.params.pattern})
+  `
+  let count_q = ['SELECT COUNT(*) ', main_q]
+  let items_q = [
+    `SELECT
+      x.id,
+      x.title,
+      x.price_ron,
+      x.contract_date `,
+    main_q]
+  
+  const allowed_fields = ['title', 'price_ron', 'contract_date']
+
+  if (allowed_fields.includes(sortBy)) {
+    items_q.push(` ORDER BY ${sortBy} `)
+    if (sortDesc==="true") items_q.push(' DESC ')
+    items_q.push(' NULLS LAST ')
+  }
+  items_q.push(sql` LIMIT ${perPage} OFFSET ${(page-1)*perPage};`)
+
+  const {rows: [{count}]} = await query(...count_q)
+  const {rows: items} = await query(...items_q)
+
+  res.send({items, count})
+})
+
+router.get('/search/company/:pattern', cache('30 seconds'), async (req, res) => {
+  const {page=1, perPage=10, sortBy, sortDesc=false} = req.query
+
+  let main_q = sql `
+    FROM company x
+    WHERE to_tsvector('romanian', x.name) @@ plainto_tsquery('romanian', ${req.params.pattern})
+  `
+  let count_q = ['SELECT COUNT(*) ', main_q]
+  let items_q = [
+    `SELECT 
+      x.id,
+      x.name,
+      x.reg_no,
+      x.country,
+      x.locality,
+      x.address`,
+    main_q]
+  
+  const allowed_fields = ['name', 'reg_no', 'country', 'locality']
+
+  if (allowed_fields.includes(sortBy)) {
+    items_q.push(` ORDER BY ${sortBy} `)
+    if (sortDesc==="true") items_q.push(' DESC ')
+    items_q.push(' NULLS LAST ')
+  }
+  items_q.push(sql` LIMIT ${perPage} OFFSET ${(page-1)*perPage};`)
+
+  const {rows: [{count}]} = await query(...count_q)
+  const {rows: items} = await query(...items_q)
+
+  res.send({items, count})
+})
+
+router.get('/search/institution/:pattern', cache('30 seconds'), async (req, res) => {
+  const {page=1, perPage=10, sortBy, sortDesc=false} = req.query
+
+  let main_q = sql `
+    FROM institution x
+    WHERE to_tsvector('romanian', x.name) @@ plainto_tsquery('romanian', ${req.params.pattern})
+  `
+  let count_q = ['SELECT COUNT(*) ', main_q]
+  let items_q = [
+    `SELECT 
+      x.id,
+      x.name,
+      x.reg_no,
+      x.county,
+      x.locality,
+      x.address,
+      longitude(geo) as long,
+      latitude(geo) as lat,
+      x.version
+      `,
+    main_q]
+  
+  const allowed_fields = ['name', 'reg_no', 'county', 'locality']
+
+  if (allowed_fields.includes(sortBy)) {
+    items_q.push(` ORDER BY ${sortBy} `)
+    if (sortDesc==="true") items_q.push(' DESC ')
+    items_q.push(' NULLS LAST ')
+  }
+  items_q.push(sql` LIMIT ${perPage} OFFSET ${(page-1)*perPage};`)
+
+  const {rows: [{count}]} = await query(...count_q)
+  const {rows: items} = await query(...items_q)
+
+  res.send({items, count})
+})
+
+router.get('/search/reg_no/:reg_no', cache('30 seconds'), async (req, res) => {
+  let main_q = sql `
+    SELECT * FROM (
+      SELECT id, true as is_company 
+      FROM company WHERE reg_no=${req.params.reg_no}
+      UNION
+      SELECT id, false as is_company
+      FROM institution WHERE reg_no=${req.params.reg_no}
+    ) foo LIMIT 1
+  `
+  let {rows: [ret]} = await query(main_q)
+  console.log(ret)
+  if (!ret) res.status(404).send({message:"Resource cannot be found"})
+  res.send(ret)
 })
