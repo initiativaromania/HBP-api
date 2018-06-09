@@ -424,7 +424,7 @@ router.get('/Company/:id(\\d+)', cache('30 seconds'), async (req, res) => {
     WHERE x.id = ${req.params.id}
     GROUP BY x.id
   `)
-  res.send(rows[0])
+  res.send(rows)
 })
 
 router.get('/SearchInstitution/:pattern', cache('30 seconds'), async (req, res) => {
