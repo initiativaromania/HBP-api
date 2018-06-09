@@ -489,7 +489,7 @@ router.get('/company/:id(\\d+)/contracts', cache('30 seconds'), async (req, res)
 
 router.get('/company/:id(\\d+)/tenders', cache('30 seconds'), async (req, res) => {
   const {page=1, perPage=10, sortBy, sortDesc=false} = req.query
-  let main_q = sql` FROM tender WHERE company = ${req.params.id}`
+  let main_q = sql` FROM tender WHERE company = ${req.params.id} AND institution IS NOT NULL `
   let count_q = ['SELECT COUNT(*) ', main_q]
   let items_q = ['SELECT id, title, contract_date, price_ron', main_q]
 
