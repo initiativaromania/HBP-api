@@ -396,7 +396,7 @@ router.get('/company_stats/:id(\\d+)', cache('30 seconds'), async(req, res) => {
       COALESCE(SUM(s.contract_total_ron), 0) AS contract_total_ron,
       COALESCE(SUM(s.tender_total_ron), 0) AS tender_total_ron
     FROM company c
-    LEFT JOIN statistics s ON s.company = c.id
+    LEFT JOIN statistics s ON s.company = c.id AND s.institution IS NOT NULL
     WHERE c.id = ${req.params.id}
     GROUP BY c.id;`)
   
@@ -674,7 +674,6 @@ router.get('/search/reg_no/:reg_no', cache('30 seconds'), async (req, res) => {
     ) foo LIMIT 1
   `
   let {rows: [ret]} = await query(main_q)
-  console.log(ret)
   if (!ret) res.status(404).send({message:"Resource cannot be found"})
   res.send(ret)
 })

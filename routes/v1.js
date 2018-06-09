@@ -420,7 +420,7 @@ router.get('/Company/:id(\\d+)', cache('30 seconds'), async (req, res) => {
       COALESCE(SUM(s.tender_count), 0) AS "NrLicitatii",
       COALESCE(SUM(s.contract_count), 0) AS "NrContracte"
     FROM company x
-    LEFT JOIN statistics s ON s.company=x.id
+    LEFT JOIN statistics s ON s.company=x.id AND s.institution IS NOT NULL
     WHERE x.id = ${req.params.id}
     GROUP BY x.id
   `)
