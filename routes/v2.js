@@ -219,7 +219,7 @@ router.get('/stats', cache('3 days'), async (req, res) => {
       count(distinct company) as companies
     FROM statistics;
 
-    -- 1: top contracts EUR
+    -- 1: top contracts RON
     SELECT
       x.id, x.title, 
       x.price_ron, x.price_eur, x.contract_date::text,
@@ -228,10 +228,10 @@ router.get('/stats', cache('3 days'), async (req, res) => {
     FROM contract x 
     INNER JOIN company c ON x.company=c.id
     INNER JOIN institution i ON x.institution=i.id
-    ORDER BY x.price_eur DESC 
+    ORDER BY x.price_ron DESC 
     LIMIT 10;
 
-    -- 2: top tenders EUR
+    -- 2: top tenders RON
     SELECT
       x.id, x.title,
       x.price_ron, x.price_eur, x.contract_date::text,
@@ -240,7 +240,7 @@ router.get('/stats', cache('3 days'), async (req, res) => {
     FROM tender x 
     INNER JOIN company c ON x.company=c.id
     INNER JOIN institution i ON x.institution=i.id
-    ORDER BY x.price_eur DESC 
+    ORDER BY x.price_ron DESC 
     LIMIT 10;
 
     -- 3: top institutions by no of contracts
@@ -319,9 +319,9 @@ router.get('/institution/:id(\\d+)/contracts', cache('30 seconds'), async (req, 
   const {page=1, perPage=10, sortBy, sortDesc=false} = req.query
   let main_q = sql` FROM contract WHERE institution = ${req.params.id}`
   let count_q = ['SELECT COUNT(*) ', main_q]
-  let items_q = ['SELECT id, title, contract_date, price_ron', main_q]
+  let items_q = ['SELECT id, title, contract_date, price_ron, price_eur', main_q]
 
-  if (['title', 'price_ron', 'contract_date'].includes(sortBy)) {
+  if (['title', 'price_ron', 'price_eur', 'contract_date'].includes(sortBy)) {
     items_q.push(` ORDER BY ${sortBy} `)
     if (sortDesc==="true") items_q.push(' DESC NULLS LAST ')
   }
@@ -337,9 +337,9 @@ router.get('/institution/:id(\\d+)/tenders', cache('30 seconds'), async (req, re
   const {page=1, perPage=10, sortBy, sortDesc=false} = req.query
   let main_q = sql` FROM tender WHERE institution = ${req.params.id}`
   let count_q = ['SELECT COUNT(*) ', main_q]
-  let items_q = ['SELECT id, title, contract_date, price_ron', main_q]
+  let items_q = ['SELECT id, title, contract_date, price_ron, price_eur', main_q]
 
-  if (['title', 'price_ron', 'contract_date'].includes(sortBy)) {
+  if (['title', 'price_ron', 'price_eur', 'contract_date'].includes(sortBy)) {
     items_q.push(` ORDER BY ${sortBy} `)
     if (sortDesc==="true") items_q.push(' DESC NULLS LAST ')
   }
@@ -475,9 +475,9 @@ router.get('/company/:id(\\d+)/contracts', cache('30 seconds'), async (req, res)
   const {page=1, perPage=10, sortBy, sortDesc=false} = req.query
   let main_q = sql` FROM contract WHERE company = ${req.params.id}`
   let count_q = ['SELECT COUNT(*) ', main_q]
-  let items_q = ['SELECT id, title, contract_date, price_ron', main_q]
+  let items_q = ['SELECT id, title, contract_date, price_ron, price_eur', main_q]
 
-  if (['title', 'price_ron', 'contract_date'].includes(sortBy)) {
+  if (['title', 'price_ron', 'price_eur', 'contract_date'].includes(sortBy)) {
     items_q.push(` ORDER BY ${sortBy} `)
     if (sortDesc==="true") items_q.push(' DESC NULLS LAST ')
   }
@@ -493,9 +493,9 @@ router.get('/company/:id(\\d+)/tenders', cache('30 seconds'), async (req, res) =
   const {page=1, perPage=10, sortBy, sortDesc=false} = req.query
   let main_q = sql` FROM tender WHERE company = ${req.params.id} AND institution IS NOT NULL `
   let count_q = ['SELECT COUNT(*) ', main_q]
-  let items_q = ['SELECT id, title, contract_date, price_ron', main_q]
+  let items_q = ['SELECT id, title, contract_date, price_ron, price_eur', main_q]
 
-  if (['title', 'price_ron', 'contract_date'].includes(sortBy)) {
+  if (['title', 'price_ron', 'price_eur', 'contract_date'].includes(sortBy)) {
     items_q.push(` ORDER BY ${sortBy} `)
     if (sortDesc==="true") items_q.push(' DESC NULLS LAST ')
   }
@@ -545,10 +545,11 @@ router.get('/search/contract/:pattern', cache('30 seconds'), async (req, res) =>
       x.id,
       x.title,
       x.price_ron,
+      x.price_eur,
       x.contract_date `,
     main_q]
   
-  const allowed_fields = ['title', 'price_ron', 'contract_date']
+  const allowed_fields = ['title', 'price_ron', 'price_eur', 'contract_date']
 
   if (allowed_fields.includes(sortBy)) {
     items_q.push(` ORDER BY ${sortBy} `)
@@ -575,10 +576,11 @@ router.get('/search/tender/:pattern', cache('30 seconds'), async (req, res) => {
       x.id,
       x.title,
       x.price_ron,
+      x.price_eur,
       x.contract_date `,
     main_q]
   
-  const allowed_fields = ['title', 'price_ron', 'contract_date']
+  const allowed_fields = ['title', 'price_ron', 'price_eur', 'contract_date']
 
   if (allowed_fields.includes(sortBy)) {
     items_q.push(` ORDER BY ${sortBy} `)
