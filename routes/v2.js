@@ -8,6 +8,8 @@ const limits = require('./limits')
 
 const {cache} = require('./cache')
 
+const csv = require('csv-express')
+
 module.exports = router
 
 function rad(x) {
@@ -676,4 +678,190 @@ router.get('/search/reg_no/:reg_no', cache('30 seconds'), async (req, res) => {
   let {rows: [ret]} = await query(main_q)
   if (!ret) res.status(404).send({message:"Resource cannot be found"})
   res.send(ret)
+})
+
+router.get('/institution/:id(\\d+)/contracts.csv', cache('30 seconds'), async (req, res) => {
+  let {rows} = await query(sql`
+    SELECT 
+          x.procedure as "Tip procedură", 
+          x.application_no as "Nr anunț participare",
+          x.application_date as "Dată anunț participare", 
+          x.closing_type as "Tip încheiere contract",
+          x.contract_no AS "Nr contract",
+          x.contract_date AS "Dată contract",
+          x.title AS "Titlu contract",
+          x.price AS "Valoare",
+          x.currency AS "Monedă",
+          x.price_eur AS "Valoare EUR",
+          x.price_ron AS "Valoare RON",
+          x.cpvcode AS "Cod CPV",
+          i.name AS "Nume instituție",
+          i.reg_no AS "CUI Instituție",
+          c.name AS "Nume companie",
+          c.reg_no AS "CUI Companie"
+    FROM contract x
+    INNER JOIN institution i ON i.id=x.institution
+    INNER JOIN company c ON c.id=x.company
+    WHERE institution = ${req.params.id}
+  `)
+
+  res.csv(rows, true)
+})
+
+router.get('/company/:id(\\d+)/contracts.csv', cache('30 seconds'), async (req, res) => {
+  let {rows} = await query(sql`
+    SELECT 
+          x.procedure as "Tip procedură", 
+          x.application_no as "Nr anunț participare",
+          x.application_date as "Dată anunț participare", 
+          x.closing_type as "Tip încheiere contract",
+          x.contract_no AS "Nr contract",
+          x.contract_date AS "Dată contract",
+          x.title AS "Titlu contract",
+          x.price AS "Valoare",
+          x.currency AS "Monedă",
+          x.price_eur AS "Valoare EUR",
+          x.price_ron AS "Valoare RON",
+          x.cpvcode AS "Cod CPV",
+          i.name AS "Nume instituție",
+          i.reg_no AS "CUI Instituție",
+          c.name AS "Nume companie",
+          c.reg_no AS "CUI Companie"
+    FROM contract x
+    INNER JOIN institution i ON i.id=x.institution
+    INNER JOIN company c ON c.id=x.company
+    WHERE company = ${req.params.id}
+  `)
+
+  res.csv(rows, true)
+})
+
+router.get('/institution/:id(\\d+)/tenders.csv', cache('30 seconds'), async (req, res) => {
+  let {rows} = await query(sql`
+    SELECT 
+          x.type AS "Tip",
+          x.contract_type AS "Tip contract",
+          x.procedure as "Tip procedură", 
+          x.activity_type AS "Tip activitate AC",
+          x.awarding_no AS "Număr anunț atribuire",
+          x.awarding_date AS "Dată anunț atribuire",
+          x.closing_type as "Tip încheiere contract",
+          x.awarding_criteria AS "Tip criterii atribuire",
+          x.is_electronic AS "Licitație electronică",
+          x.bids AS "Număr oferte primite",
+          x.is_subcontracted AS "Subcontractat",
+          x.contract_no AS "Nr contract",
+          x.contract_date AS "Dată contract",
+          x.title AS "Titlu contract",
+          x.price AS "Valoare",
+          x.currency AS "Monedă",
+          x.price_eur AS "Valoare EUR",
+          x.price_ron AS "Valoare RON",
+          x.cpvcode AS "Cod CPV",
+
+          x.bid_no as "Nr anunț participare",
+          x.bid_date as "Dată anunț participare", 
+          
+          x.estimated_bid_price AS "Valoare estimată participare",
+          x.estimated_bid_price_currency AS "Monedă valoare estimată participare",
+          x.deposits_guarantees AS "Depozite și garanții",
+          x.financing_notes AS "Modalități finanțare",
+          
+          i.name AS "Nume instituție",
+          i.reg_no AS "CUI Instituție",
+          c.name AS "Nume companie",
+          c.reg_no AS "CUI Companie"
+    FROM tender x
+    INNER JOIN institution i ON i.id=x.institution
+    INNER JOIN company c ON c.id=x.company
+    WHERE institution = ${req.params.id}
+  `)
+
+  res.csv(rows, true)
+})
+
+router.get('/company/:id(\\d+)/tenders.csv', cache('30 seconds'), async (req, res) => {
+  let {rows} = await query(sql`
+    SELECT 
+          x.type AS "Tip",
+          x.contract_type AS "Tip contract",
+          x.procedure as "Tip procedură", 
+          x.activity_type AS "Tip activitate AC",
+          x.awarding_no AS "Număr anunț atribuire",
+          x.awarding_date AS "Dată anunț atribuire",
+          x.closing_type as "Tip încheiere contract",
+          x.awarding_criteria AS "Tip criterii atribuire",
+          x.is_electronic AS "Licitație electronică",
+          x.bids AS "Număr oferte primite",
+          x.is_subcontracted AS "Subcontractat",
+          x.contract_no AS "Nr contract",
+          x.contract_date AS "Dată contract",
+          x.title AS "Titlu contract",
+          x.price AS "Valoare",
+          x.currency AS "Monedă",
+          x.price_eur AS "Valoare EUR",
+          x.price_ron AS "Valoare RON",
+          x.cpvcode AS "Cod CPV",
+
+          x.bid_no as "Nr anunț participare",
+          x.bid_date as "Dată anunț participare", 
+          
+          x.estimated_bid_price AS "Valoare estimată participare",
+          x.estimated_bid_price_currency AS "Monedă valoare estimată participare",
+          x.deposits_guarantees AS "Depozite și garanții",
+          x.financing_notes AS "Modalități finanțare",
+          
+          i.name AS "Nume instituție",
+          i.reg_no AS "CUI Instituție",
+          c.name AS "Nume companie",
+          c.reg_no AS "CUI Companie"
+    FROM tender x
+    INNER JOIN institution i ON i.id=x.institution
+    INNER JOIN company c ON c.id=x.company
+    WHERE x.company = ${req.params.id}
+  `)
+
+  res.csv(rows, true)
+})
+
+router.get('/institution/:id(\\d+)/companies.csv', cache('30 seconds'), async (req, res) => {
+  let {rows} = await query(sql`
+  SELECT 
+    c.name AS "Nume companie", 
+    c.reg_no AS "CUI companie",
+    c.country AS "Țară",
+    c.locality AS "Localitate",
+    c.address AS "Adresă",
+    COALESCE(s.contract_count, 0) AS "Număr achiziții directe",
+    COALESCE(s.contract_total_eur, 0) AS "Total EUR achiziții directe",
+    COALESCE(s.contract_total_ron, 0) AS "Total RON achiziții directe",
+    COALESCE(s.tender_count, 0) AS "Număr licitații",
+    COALESCE(s.tender_total_eur, 0) AS "Total EUR licitații",
+    COALESCE(s.tender_total_ron, 0) AS "Total RON licitații"
+  FROM company c 
+  INNER JOIN statistics s ON s.company=c.id
+  WHERE s.institution = ${req.params.id}
+  `)
+  res.csv(rows, true)
+})
+
+router.get('/company/:id(\\d+)/institutions.csv', cache('30 seconds'), async (req, res) => {
+  let {rows} = await query(sql`
+  SELECT 
+    i.name AS "Nume instituție", 
+    i.reg_no AS "CUI instituție",
+    i.county AS "Județ",
+    i.locality AS "Localitate",
+    i.address AS "Adresă",
+    COALESCE(s.contract_count, 0) AS "Număr achiziții directe",
+    COALESCE(s.contract_total_eur, 0) AS "Total EUR achiziții directe",
+    COALESCE(s.contract_total_ron, 0) AS "Total RON achiziții directe",
+    COALESCE(s.tender_count, 0) AS "Număr licitații",
+    COALESCE(s.tender_total_eur, 0) AS "Total EUR licitații",
+    COALESCE(s.tender_total_ron, 0) AS "Total RON licitații"
+  FROM institution i
+  INNER JOIN statistics s ON s.institution=i.id
+  WHERE s.company = ${req.params.id}
+  `)
+  res.csv(rows, true)
 })
