@@ -323,8 +323,7 @@ router.get('/institution/:id(\\d+)/contracts', cache('30 seconds'), async (req, 
 
   if (['title', 'price_ron', 'contract_date'].includes(sortBy)) {
     items_q.push(` ORDER BY ${sortBy} `)
-    if (sortDesc==="true") items_q.push(' DESC ')
-    items_q.push(' NULLS LAST ')
+    if (sortDesc==="true") items_q.push(' DESC NULLS LAST ')
   }
   items_q.push(sql` LIMIT ${perPage} OFFSET ${(page-1)*perPage};`)
 
@@ -342,7 +341,7 @@ router.get('/institution/:id(\\d+)/tenders', cache('30 seconds'), async (req, re
 
   if (['title', 'price_ron', 'contract_date'].includes(sortBy)) {
     items_q.push(` ORDER BY ${sortBy} `)
-    if (sortDesc==="true") items_q.push(' DESC ')
+    if (sortDesc==="true") items_q.push(' DESC NULLS LAST ')
   }
   items_q.push(sql` LIMIT ${perPage} OFFSET ${(page-1)*perPage};`)
 
@@ -367,7 +366,8 @@ router.get('/institution/:id(\\d+)/companies', cache('30 seconds'), async (req, 
   
   if (allowed_fields.includes(sortBy)) {
     items_q.push(` ORDER BY ${sortBy} `)
-    if (sortDesc==="true") items_q.push(' DESC ')
+    if (sortDesc==="true") items_q.push(' DESC NULLS LAST ')
+
   }
   items_q.push(sql` LIMIT ${perPage} OFFSET ${(page-1)*perPage};`)
 
@@ -479,7 +479,7 @@ router.get('/company/:id(\\d+)/contracts', cache('30 seconds'), async (req, res)
 
   if (['title', 'price_ron', 'contract_date'].includes(sortBy)) {
     items_q.push(` ORDER BY ${sortBy} `)
-    if (sortDesc==="true") items_q.push(' DESC ')
+    if (sortDesc==="true") items_q.push(' DESC NULLS LAST ')
   }
   items_q.push(sql` LIMIT ${perPage} OFFSET ${(page-1)*perPage};`)
 
@@ -497,7 +497,7 @@ router.get('/company/:id(\\d+)/tenders', cache('30 seconds'), async (req, res) =
 
   if (['title', 'price_ron', 'contract_date'].includes(sortBy)) {
     items_q.push(` ORDER BY ${sortBy} `)
-    if (sortDesc==="true") items_q.push(' DESC ')
+    if (sortDesc==="true") items_q.push(' DESC NULLS LAST ')
   }
   items_q.push(sql` LIMIT ${perPage} OFFSET ${(page-1)*perPage};`)
 
@@ -522,8 +522,7 @@ router.get('/company/:id(\\d+)/institutions', cache('30 seconds'), async (req, r
   
   if (allowed_fields.includes(sortBy)) {
     items_q.push(` ORDER BY ${sortBy} `)
-    if (sortDesc==="true") items_q.push(' DESC ')
-    items_q.push(' NULLS LAST ')
+    if (sortDesc==="true") items_q.push(' DESC NULLS LAST ')
   }
   items_q.push(sql` LIMIT ${perPage} OFFSET ${(page-1)*perPage};`)
 
@@ -553,8 +552,7 @@ router.get('/search/contract/:pattern', cache('30 seconds'), async (req, res) =>
 
   if (allowed_fields.includes(sortBy)) {
     items_q.push(` ORDER BY ${sortBy} `)
-    if (sortDesc==="true") items_q.push(' DESC ')
-    items_q.push(' NULLS LAST ')
+    if (sortDesc==="true") items_q.push(' DESC NULLS LAST ')
   }
   items_q.push(sql` LIMIT ${perPage} OFFSET ${(page-1)*perPage};`)
 
@@ -584,8 +582,7 @@ router.get('/search/tender/:pattern', cache('30 seconds'), async (req, res) => {
 
   if (allowed_fields.includes(sortBy)) {
     items_q.push(` ORDER BY ${sortBy} `)
-    if (sortDesc==="true") items_q.push(' DESC ')
-    items_q.push(' NULLS LAST ')
+    if (sortDesc==="true") items_q.push(' DESC NULLS LAST ')
   }
   items_q.push(sql` LIMIT ${perPage} OFFSET ${(page-1)*perPage};`)
 
@@ -617,8 +614,7 @@ router.get('/search/company/:pattern', cache('30 seconds'), async (req, res) => 
 
   if (allowed_fields.includes(sortBy)) {
     items_q.push(` ORDER BY ${sortBy} `)
-    if (sortDesc==="true") items_q.push(' DESC ')
-    items_q.push(' NULLS LAST ')
+    if (sortDesc==="true") items_q.push(' DESC NULLS LAST ')
   }
   items_q.push(sql` LIMIT ${perPage} OFFSET ${(page-1)*perPage};`)
 
@@ -654,8 +650,7 @@ router.get('/search/institution/:pattern', cache('30 seconds'), async (req, res)
 
   if (allowed_fields.includes(sortBy)) {
     items_q.push(` ORDER BY ${sortBy} `)
-    if (sortDesc==="true") items_q.push(' DESC ')
-    items_q.push(' NULLS LAST ')
+    if (sortDesc==="true") items_q.push(' DESC NULLS LAST ')
   }
   items_q.push(sql` LIMIT ${perPage} OFFSET ${(page-1)*perPage};`)
 
