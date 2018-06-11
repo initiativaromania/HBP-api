@@ -865,3 +865,248 @@ router.get('/company/:id(\\d+)/institutions.csv', cache('30 seconds'), async (re
   `)
   res.csv(rows, true)
 })
+
+router.get('/institution/:id(\\d+)/volume_chart.csv', cache('30 seconds'), async (req, res) => {
+  let start = req.query.start || '2007-01-01'
+  let end = moment(req.query.end).local() || moment().local()
+  let diff = moment.duration(end.diff(moment(start).local()))
+  let unitMul = 1
+  let thresholdMin = 32
+  let thresholdMax = 64
+  units = Math.round(diff.asDays())
+  while (units / unitMul > thresholdMax) { unitMul++ }
+  
+  const {rows: hist} = await query(sql`
+    WITH d AS (
+      SELECT 
+      ser,
+      ${start}::date + ser + ${Math.floor(unitMul/2)}::int AS date,
+      ${start}::date + ser AS start_date,
+      ${start}::date + ser + ${unitMul-1}::int AS end_date
+      FROM generate_series(0, ${units}-1, ${unitMul}) ser
+    ), cx AS (
+      SELECT
+        ser,
+        COALESCE(SUM(c.price_ron), 0) AS total_ron,
+        COALESCE(SUM(c.price_eur), 0) AS total_eur,
+        COALESCE(COUNT(c.id)) AS count
+      FROM d
+      LEFT JOIN contract c ON c.contract_date BETWEEN d.start_date AND d.end_date
+        AND c.institution = ${req.params.id}
+      GROUP BY ser
+    ), tx AS (
+      SELECT
+        ser,
+        COALESCE(SUM(c.price_ron), 0) AS total_ron,
+        COALESCE(SUM(c.price_eur), 0) AS total_eur,
+        COALESCE(COUNT(c.id)) AS count
+      FROM d
+      LEFT JOIN tender c ON c.contract_date BETWEEN d.start_date AND d.end_date
+        AND c.institution = ${req.params.id}
+      GROUP BY ser
+    )
+    SELECT 
+      d.start_date AS "Început interval",
+      d.end_date "Sfârșit interval", 
+      cx.total_ron AS "Total RON achiziții directe",
+      cx.total_eur AS "Total EUR achiziții directe",
+      cx.count AS "Număr achiziții directe",
+      tx.total_ron AS "Total RON licitații", 
+      tx.total_eur AS "Total EUR licitații", 
+      tx.count AS "Număr licitații"
+    FROM d INNER JOIN cx ON cx.ser=d.ser INNER JOIN tx ON tx.ser=d.ser
+  `)
+
+  res.csv(hist, true)
+})
+
+router.get('/company/:id(\\d+)/volume_chart.csv', cache('30 seconds'), async (req, res) => {
+  let start = req.query.start || '2007-01-01'
+  let end = moment(req.query.end).local() || moment().local()
+  let diff = moment.duration(end.diff(moment(start).local()))
+  let unitMul = 1
+  let thresholdMin = 32
+  let thresholdMax = 64
+  units = Math.round(diff.asDays())
+  while (units / unitMul > thresholdMax) { unitMul++ }
+  
+  const {rows: hist} = await query(sql`
+    WITH d AS (
+      SELECT 
+      ser,
+      ${start}::date + ser + ${Math.floor(unitMul/2)}::int AS date,
+      ${start}::date + ser AS start_date,
+      ${start}::date + ser + ${unitMul-1}::int AS end_date
+      FROM generate_series(0, ${units}-1, ${unitMul}) ser
+    ), cx AS (
+      SELECT
+        ser,
+        COALESCE(SUM(c.price_ron), 0) AS total_ron,
+        COALESCE(SUM(c.price_eur), 0) AS total_eur,
+        COALESCE(COUNT(c.id)) AS count
+      FROM d
+      LEFT JOIN contract c ON c.contract_date BETWEEN d.start_date AND d.end_date
+        AND c.company = ${req.params.id}
+      GROUP BY ser
+    ), tx AS (
+      SELECT
+        ser,
+        COALESCE(SUM(c.price_ron), 0) AS total_ron,
+        COALESCE(SUM(c.price_eur), 0) AS total_eur,
+        COALESCE(COUNT(c.id)) AS count
+      FROM d
+      LEFT JOIN tender c ON c.contract_date BETWEEN d.start_date AND d.end_date
+        AND c.company = ${req.params.id}
+      GROUP BY ser
+    )
+    SELECT 
+      d.start_date AS "Început interval",
+      d.end_date "Sfârșit interval", 
+      cx.total_ron AS "Total RON achiziții directe",
+      cx.total_eur AS "Total EUR achiziții directe",
+      cx.count AS "Număr achiziții directe",
+      tx.total_ron AS "Total RON licitații", 
+      tx.total_eur AS "Total EUR licitații", 
+      tx.count AS "Număr licitații"
+    FROM d INNER JOIN cx ON cx.ser=d.ser INNER JOIN tx ON tx.ser=d.ser
+  `)
+
+  res.csv(hist, true)
+})
+
+const cpv_legend = require('../common/cpv')
+
+router.get('/institution/:id(\\d+)/cpv_stats.csv', cache("30 seconds"), async (req, res) => {
+  let start = req.query.start || '2007-01-01'
+  let end = moment(req.query.end).local() || moment().local()
+
+  const {rows: cpv} = await query(sql`
+    SELECT
+      category AS "CPV",
+      SUM(cx_price_ron) AS "Total RON achiziții directe",
+      SUM(cx_price_eur) AS "Total EUR achiziții directe",
+      SUM(cx_cnt) AS "Număr achiziții directe",
+      SUM(tx_price_ron) AS "Total RON licitații",
+      SUM(tx_price_eur) AS "Total EUR licitații",
+      SUM(tx_cnt) AS "Număr licitații"
+    FROM (
+      SELECT 
+        substring(cpvcode, 1, 2) AS category,
+        price_ron as cx_price_ron,
+        price_eur as cx_price_eur,
+        1 as cx_cnt,
+        0 as tx_price_ron,
+        0 as tx_price_eur,
+        0 as tx_cnt
+      FROM contract c WHERE c.institution=${req.params.id} 
+        AND contract_date BETWEEN ${start}::date AND ${end}::date
+      UNION ALL
+      SELECT 
+        substring(cpvcode, 1, 2) AS category,
+        0 as cx_price_ron,
+        0 as cx_price_eur,
+        0 as cx_cnt,
+        price_ron as tx_price_ron,
+        price_eur as tx_price_eur,
+        1 as tx_cnt
+      FROM tender t WHERE t.institution=${req.params.id}
+        AND contract_date BETWEEN ${start}::date AND ${end}::date
+    ) cx GROUP BY 1
+  `)
+  for (var row of cpv) {
+    if (cpv_legend[row.CPV]!==undefined)
+      row["Denumire"] = cpv_legend[row.CPV]
+    else
+      row["Denumire"] = "--"
+  }
+  res.csv(cpv, true)
+})
+
+router.get('/company/:id(\\d+)/cpv_stats.csv', cache("30 seconds"), async (req, res) => {
+  let start = req.query.start || '2007-01-01'
+  let end = moment(req.query.end).local() || moment().local()
+
+  const {rows: cpv} = await query(sql`
+    SELECT
+      category AS "CPV",
+      SUM(cx_price_ron) AS "Total RON achiziții directe",
+      SUM(cx_price_eur) AS "Total EUR achiziții directe",
+      SUM(cx_cnt) AS "Număr achiziții directe",
+      SUM(tx_price_ron) AS "Total RON licitații",
+      SUM(tx_price_eur) AS "Total EUR licitații",
+      SUM(tx_cnt) AS "Număr licitații"
+    FROM (
+      SELECT 
+        substring(cpvcode, 1, 2) AS category,
+        price_ron as cx_price_ron,
+        price_eur as cx_price_eur,
+        1 as cx_cnt,
+        0 as tx_price_ron,
+        0 as tx_price_eur,
+        0 as tx_cnt
+      FROM contract c WHERE c.company=${req.params.id} 
+        AND contract_date BETWEEN ${start}::date AND ${end}::date
+      UNION ALL
+      SELECT 
+        substring(cpvcode, 1, 2) AS category,
+        0 as cx_price_ron,
+        0 as cx_price_eur,
+        0 as cx_cnt,
+        price_ron as tx_price_ron,
+        price_eur as tx_price_eur,
+        1 as tx_cnt
+      FROM tender t WHERE t.company=${req.params.id}
+        AND contract_date BETWEEN ${start}::date AND ${end}::date
+    ) cx GROUP BY 1
+  `)
+  for (var row of cpv) {
+    if (cpv_legend[row.CPV]!==undefined)
+      row["Denumire"] = cpv_legend[row.CPV]
+    else
+      row["Denumire"] = "--"
+  }
+  res.csv(cpv, true)
+})
+
+router.get('/company/:id(\\d+)/geo_stats.csv', cache("30 seconds"), async (req, res) => {
+  let start = req.query.start || '2007-01-01'
+  let end = moment(req.query.end).local() || moment().local()
+
+  const {rows: map} = await query(sql`
+    SELECT 
+      county AS "Județ",
+      SUM(cx_price_ron) AS "Total RON achiziții directe",
+      SUM(cx_price_eur) AS "Total EUR achiziții directe",
+      SUM(cx_cnt) AS "Număr achiziții directe",
+      SUM(tx_price_ron) AS "Total RON licitații",
+      SUM(tx_price_eur) AS "Total EUR licitații",
+      SUM(tx_cnt) AS "Număr licitații"
+    FROM (
+      SELECT 
+        i.county, 
+        price_ron as cx_price_ron,
+        price_eur as cx_price_eur,
+        1 as cx_cnt,
+        0 as tx_price_ron,
+        0 as tx_price_eur,
+        0 as tx_cnt
+      FROM contract c INNER JOIN institution i ON i.id=c.institution
+      WHERE c.company=${req.params.id}
+      AND contract_date BETWEEN ${start}::date AND ${end}::date
+      UNION ALL
+      SELECT 
+        i.county,
+        0 as cx_price_ron,
+        0 as cx_price_eur,
+        0 as cx_cnt,
+        price_ron as tx_price_ron,
+        price_eur as tx_price_eur,
+        1 as tx_cnt
+      FROM tender t INNER JOIN institution i ON i.id=t.institution
+      WHERE t.company=${req.params.id}
+      AND contract_date BETWEEN ${start}::date AND ${end}::date
+    ) subq GROUP BY subq.county
+  `)
+
+  res.csv(map, true)
+})
